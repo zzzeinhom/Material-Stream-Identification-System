@@ -79,7 +79,7 @@ class DataAugmentor:
     def add_gaussian_noise(self, img):
  
         # Generate random noise
-        noise = np.random.normal(0, 10, img.shape).astype(np.uint8)
+        noise = np.random.normal(0, 1, img.shape).astype(np.uint8)
         
         # Add noise to image
         noisy_img = cv2.add(img, noise)
