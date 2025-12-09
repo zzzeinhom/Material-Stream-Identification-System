@@ -17,10 +17,10 @@ class DataAugmentor:
             self.flip_vertical,
             self.adjust_brightness,
             self.adjust_contrast,
-            self.add_gaussian_noise,
+            self.add_pixel_noise,
             self.blur_image,
-            self.zoom_image,
-            self.translate_image
+            self.scale_image,
+            self.shift_image
         ]
     
     def rotate_image(self, img):
@@ -29,26 +29,22 @@ class DataAugmentor:
         angle = random.uniform(-30, 30)
         
         # Get image dimensions
-        height, width = img.shape[:2]
-        
+        h, w = img.shape[:2]
+        center = (w // 2, h // 2)
+
         # Calculate rotation matrix
-        center = (width // 2, height // 2)
-        rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-        
-        # Perform rotation
-        rotated = cv2.warpAffine(img, rotation_matrix, (width, height))
-        
-        return rotated
+        M = cv2.getRotationMatrix2D(center, angle, 1.0)
+
+        # Apply rotation
+        result = cv2.warpAffine(img, M, (w, h))
+        return result
     
     def flip_horizontal(self, img):
-
-        # 1 = horizontal flip
-        return cv2.flip(img, 1)
+        return img[:, ::-1]
     
     def flip_vertical(self, img):
-
-        # 0 = vertical flip
-        return cv2.flip(img, 0)
+        return img[::-1, :]
+        
     
     def adjust_brightness(self, img):
 
@@ -76,7 +72,7 @@ class DataAugmentor:
         # Convert back to OpenCV format
         return cv2.cvtColor(np.array(contrasted), cv2.COLOR_RGB2BGR)
     
-    def add_gaussian_noise(self, img):
+    def add_pixel_noise(self, img):
  
         # Generate random noise
         noise = np.random.normal(0, 1, img.shape).astype(np.uint8)
@@ -88,62 +84,57 @@ class DataAugmentor:
     
     def blur_image(self, img):
 
-        # Random kernel size (must be odd)
-        kernel_size = random.choice([3, 5, 7])
+        # Random kernel dimension
+        kernel_dim = random.choice([3, 5, 7])
         
         # Apply Gaussian blur
-        blurred = cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
+        blurred = cv2.GaussianBlur(img, (kernel_dim, kernel_dim), 0)
         
         return blurred
     
-    def zoom_image(self, img):
-
-        height, width = img.shape[:2]
+    def scale_image(self, img):
+        h, w = img.shape[:2]
+        scaling_factor = random.uniform(0.75, 1.25)
         
-        # Random zoom factor (0.8 to 1.2)
-        zoom_factor = random.uniform(0.8, 1.2)
+        new_h = int(h * scaling_factor)
+        new_w = int(w * scaling_factor)
         
-        # Calculate new dimensions
-        new_height = int(height * zoom_factor)
-        new_width = int(width * zoom_factor)
+        resized = cv2.resize(img, (new_w, new_h))
         
-        # Resize image
-        zoomed = cv2.resize(img, (new_width, new_height))
-        
-        # zoom in
-        if zoom_factor > 1:
-            # Crop center
-            start_x = (new_width - width) // 2
-            start_y = (new_height - height) // 2
-            zoomed = zoomed[start_y:start_y+height, start_x:start_x+width]
-
-        # zoom out
+        if scaling_factor > 1.0:
+            # Center crop for zoom in
+            crop_y = (new_h - h) // 2
+            crop_x = (new_w - w) // 2
+            return resized[crop_y:crop_y+h, crop_x:crop_x+w]
         else:
-            # Fill with black borders
-            fill_x = (width - new_width) // 2
-            fill_y = (height - new_height) // 2
-            zoomed = cv2.copyMakeBorder(zoomed, fill_y, height-new_height-fill_y, 
-                                       fill_x, width-new_width-fill_x, 
-                                       cv2.BORDER_CONSTANT, value=[0, 0, 0])
-        
-        return zoomed
+            # Pad for zoom out
+            pad_y = (h - new_h) // 2
+            pad_x = (w - new_w) // 2
+            pad_bottom = h - new_h - pad_y
+            pad_right = w - new_w - pad_x
+            
+            return cv2.copyMakeBorder(
+                resized, 
+                pad_y, pad_bottom, 
+                pad_x, pad_right, 
+                cv2.BORDER_CONSTANT, 
+                value=[0, 0, 0]
+            )
     
-    def translate_image(self, img):
+    def shift_image(self, img):
 
-        height, width = img.shape[:2]
+        h, w = img.shape[:2]
         
-        # Random translation -20 to 20 pixels
-        tx = random.randint(-20, 20)
-        ty = random.randint(-20, 20)
+        dx = random.randint(-20, 20)
+        dy = random.randint(-20, 20)
         
-        # Create translation matrix
-        translation_matrix = np.float32([[1, 0, tx], [0, 1, ty]])
+        # Translation matrix
+        M = np.float32([[1, 0, dx], [0, 1, dy]])
         
-        # Apply translation
-        translated = cv2.warpAffine(img, translation_matrix, (width, height))
+        shifted = cv2.warpAffine(img, M, (w, h))
         
-        return translated
-    
+        return shifted
+
     def augment_image(self, img, num_augmentations=1):
 
         augmented = img.copy()
@@ -180,7 +171,7 @@ def augment_dataset(input_dir, output_dir, target_count=-1):
         os.makedirs(output_class_path, exist_ok=True)
         
         if not input_class_path.exists():
-            print(f"    Warning: {class_name} folder not found, skipping...")
+            print(f"    Skipping {class_name}, folder not found")
             continue
         
         # Get all original images
@@ -188,7 +179,7 @@ def augment_dataset(input_dir, output_dir, target_count=-1):
         
         num_original = len(original_images)
         if num_original == 0:
-            print(f"    Warning: No images found in {class_name}, skipping...")
+            print(f"    Skipping {class_name}, no images found")
             continue
 
         # Calculate target count
@@ -206,11 +197,11 @@ def augment_dataset(input_dir, output_dir, target_count=-1):
         num_augmented_needed = target_count - num_original
         
         if num_augmented_needed <= 0:
-            print(f"    Copying original images only...\n")
+            print(f"    Copying original images only\n")
             num_augmented_needed = 0            
         
         # Copy originals, filter valid images
-        print(f"    Processing original images...")
+        print(f"    Processing original images")
         valid_originals = []
         failed_copies = []
         
@@ -251,7 +242,7 @@ def augment_dataset(input_dir, output_dir, target_count=-1):
                 print(f"    No valid images found to augment!")
                 continue
 
-            print(f"    Generating augmented images...")
+            print(f"    Generating augmented images")
             
             successful_aug = 0
             failed_aug = 0
@@ -318,13 +309,13 @@ def create_unknown_class(output_dir, target_count=-1):
             all_images.extend(images)
     
     if len(all_images) == 0:
-        print("    Error: No images found in any class!")
+        print("    No images found in any class!")
         return
     
     if target_count == -1:
         target_count = len(all_images) // len(class_names)
 
-    print(f"    Generating {target_count} 'unknown' images...")
+    print(f"    Generating {target_count} 'unknown' images")
     print("    Methods: Heavy blur, extreme distortion, noise")
     
     for idx in tqdm(range(target_count), desc="    Generating unknown"):
@@ -333,16 +324,16 @@ def create_unknown_class(output_dir, target_count=-1):
         img = cv2.imread(str(source_img_path))
         
         # Apply extreme transformations to make it "unknown"
-        method = random.choice(['heavy_blur', 'extreme_noise', 'dark', 'overexposed'])
+        method = random.choice(['heavy_blur', 'extreme_noise', 'very_dark', 'overexposed'])
         
         if method == 'heavy_blur':
-            img = cv2.GaussianBlur(img, (21, 21), 0)
+            img = cv2.GaussianBlur(img, (25, 25), 0)
         
         elif method == 'extreme_noise':
             noise = np.random.normal(0, 50, img.shape).astype(np.uint8)
             img = cv2.add(img, noise)
         
-        elif method == 'dark':
+        elif method == 'very_dark':
             img = cv2.convertScaleAbs(img, alpha=0.3, beta=0)
         
         elif method == 'overexposed':
@@ -357,8 +348,7 @@ def create_unknown_class(output_dir, target_count=-1):
     print("="*60 + "\n")
 
 
-if __name__ == "__main__":
-
+def main():
     # Path to original dataset
     ORIGINAL_DATASET_DIR = "dataset"
     
@@ -379,3 +369,6 @@ if __name__ == "__main__":
         output_dir=AUGMENTED_DATASET_DIR,
         target_count=TARGET_COUNT_PER_CLASS
     )
+
+if __name__ == "__main__":
+    main()
