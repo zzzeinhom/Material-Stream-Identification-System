@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 from sklearn.decomposition import PCA
-from sklearn.neighbors import KNeighborsClassifier  # <--- NEW IMPORT
+from sklearn.neighbors import KNeighborsClassifier 
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -20,16 +20,14 @@ class KNNClassifier:
                            'distance': Weight points by the inverse of their distance.
             n_components (int): Number of components for PCA dimensionality reduction.
         """
-        # Initialize the k-NN model with the specific weighting scheme
+        
         self.knn_model = KNeighborsClassifier(
             n_neighbors=n_neighbors,
             weights=weights,
             n_jobs=-1,
-            
-            
                                               )
         
-        self.scaler = MinMaxScaler()
+        self.scaler = StandardScaler()
         self.pca = PCA(n_components=n_components)
         self.class_names = None
         self.is_trained = False
@@ -143,7 +141,7 @@ def main():
         n_components=100    # PCA components
     )
     
-    knn.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash']
+    knn.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash', 'unknown']
 
     # --- Train ---
     knn.train(X, y, test_size=0.2)
