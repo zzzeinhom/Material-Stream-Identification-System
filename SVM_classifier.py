@@ -5,16 +5,17 @@ import os
 from pathlib import Path
 
 from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import joblib
 from tqdm import tqdm
 
 
 class SVMClassifier:
-    def __init__(self, kernel='rbf', C=1.0, gamma='scale',n_components=100):
+    def __init__(self, kernel='rbf', C=1.0, gamma='scale', n_components=400):
         """
         Initialize SVM Classifier
 
@@ -55,8 +56,8 @@ class SVMClassifier:
 
         # Scale features
         print("Scaling features...")
-        X_train_scaled = self.scaler.fit_transform(X_train)
-        X_test_scaled = self.scaler.transform(X_test)
+        X_train_scaled = X_train
+        X_test_scaled = X_test
 
         print("Applying PCA dimensionality reduction...")  # <--- ADDED
         # Fit PCA on training data and transform it
@@ -76,11 +77,11 @@ class SVMClassifier:
         accuracy = accuracy_score(y_test, y_pred)
 
         print(f"\nAccuracy: {accuracy:.4f}")
-        print("\nClassification Report:")
-        print(classification_report(y_test, y_pred, target_names=self.class_names))
-
-        print("\nConfusion Matrix:")
-        print(confusion_matrix(y_test, y_pred))
+        # print("\nClassification Report:")
+        # print(classification_report(y_test, y_pred, target_names=self.class_names))
+        #
+        # print("\nConfusion Matrix:")
+        # print(confusion_matrix(y_test, y_pred))
 
         print("=" * 60)
         print("TRAINING COMPLETE!")
@@ -88,13 +89,8 @@ class SVMClassifier:
 
         return X_test_scaled, y_test
 
-    def predict(self, image_path):
+    def predict(self, X):
         """
-        Predict class for an image
-
-        Args:
-            image_path: Path to the image file
-
         Returns:
             class_name: Predicted class name
             confidence: Prediction confidence
@@ -102,17 +98,9 @@ class SVMClassifier:
         if not self.is_trained:
             raise ValueError("Model must be trained before prediction")
 
-        # Extract features from image
-        features = self.extract_features_from_image(image_path)
-        if features is None:
-            raise ValueError(f"Could not extract features from {image_path}")
-
-        # Scale features
-        features_scaled = self.scaler.transform(features.reshape(1, -1))
-
         # Predict
-        prediction = self.svm_model.predict(features_scaled)[0]
-        probabilities = self.svm_model.predict_proba(features_scaled)[0]
+        prediction = self.svm_model.predict(X)
+        probabilities = self.svm_model.predict_proba(X)
 
         class_name = self.class_names[prediction]
         confidence = probabilities[prediction]
@@ -125,17 +113,19 @@ def main():
     DATASET_DIR = "data/features"  # Output from data_augmentation.py
     MODEL_SAVE_PATH = "data/models/svm_classifier"
 
+    # You can grab the winning model directly:
+
     # Initialize classifier
-    classifier = SVMClassifier(kernel='rbf', C=1000, gamma='scale')
-    SVMClassifier.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash', 'unknown']
+
+    classifier = SVMClassifier(kernel='rbf', C = 100, gamma='scale', n_components=1000)
+    # SVMClassifier.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash']
     # Load and extract features from augmented dataset
     print("Loading and extracting features from augmented dataset...")
     X, y = pd.read_csv("data/features/features.csv", header=None), pd.read_csv("data/features/labels.csv", header=None).values.ravel()
-    print(f"Loaded {len(X)} samples with {X.shape[1]} features")
-    print(f"Classes: {SVMClassifier.class_names}\n")
+    # print(f"Loaded {len(X)} samples with {X.shape[1]} features")
+    # print(f"Classes: {SVMClassifier.class_names}\n")
+    classifier.train(X.values, y)
 
-    # Train model
-    classifier.train(X, y, test_size=0.2)
 
 
 
