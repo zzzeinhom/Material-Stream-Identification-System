@@ -340,7 +340,7 @@ def main():
     # - 'all': you can use all feature extraction methods together
     # - 'color+lbp': you can combine specific feature extraction methods
     # - 'hog' : you can use a single feature extraction method
-    METHOD = 'lbp+color'
+    METHOD = 'lbp+color+glcm'
 
     
     print(" Starting feature extraction...")

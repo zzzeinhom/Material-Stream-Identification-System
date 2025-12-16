@@ -64,8 +64,8 @@ class KNNClassifier:
         X_train_scaled = self.scaler.fit_transform(X_train)
         X_test_scaled = self.scaler.transform(X_test)
 
-        # 2. Apply nca (Crucial to reduce 'Curse of Dimensionality' in k-NN)
-        print("Applying nca dimensionality reduction...")
+        # 2. Apply nca (Neighborhood Components Analysis)
+        print("Applying Neighborhood Components Analysis...")
         X_train_nca = self.nca.fit_transform(X_train_scaled, y_train)
         X_test_nca = self.nca.transform(X_test_scaled)
         
@@ -143,7 +143,7 @@ def main():
     knn = KNNClassifier(
         n_neighbors=3,      # k=3
         weights='distance', # Weight points by inverse of their distance
-        n_components=100    # nca components
+        n_components=70   # nca components
     )
     
     knn.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash', 'unknown']
