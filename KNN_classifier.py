@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 from sklearn.decomposition import PCA
+from sklearn.neighbors import NeighborhoodComponentsAnalysis
 from sklearn.neighbors import KNeighborsClassifier 
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
@@ -18,17 +19,21 @@ class KNNClassifier:
             weights (str): Weight function used in prediction.
                            'uniform': All points in each neighborhood are weighted equally.
                            'distance': Weight points by the inverse of their distance.
-            n_components (int): Number of components for PCA dimensionality reduction.
+            n_components (int): Number of components for nca dimensionality reduction.
         """
         
         self.knn_model = KNeighborsClassifier(
             n_neighbors=n_neighbors,
             weights=weights,
             n_jobs=-1,
+            p=1  # Manhattan distance 
+            #p=2  # Euclidean distance
+              
                                               )
         
         self.scaler = StandardScaler()
-        self.pca = PCA(n_components=n_components)
+        #self.nca = nca(n_components=n_components)
+        self.nca=NeighborhoodComponentsAnalysis(n_components=n_components)
         self.class_names = None
         self.is_trained = False
 
@@ -59,20 +64,20 @@ class KNNClassifier:
         X_train_scaled = self.scaler.fit_transform(X_train)
         X_test_scaled = self.scaler.transform(X_test)
 
-        # 2. Apply PCA (Crucial to reduce 'Curse of Dimensionality' in k-NN)
-        print("Applying PCA dimensionality reduction...")
-        X_train_pca = self.pca.fit_transform(X_train_scaled)
-        X_test_pca = self.pca.transform(X_test_scaled)
+        # 2. Apply nca (Crucial to reduce 'Curse of Dimensionality' in k-NN)
+        print("Applying nca dimensionality reduction...")
+        X_train_nca = self.nca.fit_transform(X_train_scaled, y_train)
+        X_test_nca = self.nca.transform(X_test_scaled)
         
-        print(f"Reduced Feature dimension: {X_train_pca.shape[1]}")
+        print(f"Reduced Feature dimension: {X_train_nca.shape[1]}")
 
         # 3. Fit k-NN
         print("Fitting k-NN model...")
-        self.knn_model.fit(X_train_pca, y_train)
+        self.knn_model.fit(X_train_nca, y_train)
         self.is_trained = True
 
         # 4. Evaluate
-        y_pred = self.knn_model.predict(X_test_pca)
+        y_pred = self.knn_model.predict(X_test_nca)
         accuracy = accuracy_score(y_test, y_pred)
 
         print(f"\nAccuracy: {accuracy:.4f}")
@@ -102,12 +107,12 @@ class KNNClassifier:
         # 1. Scale
         features_scaled = self.scaler.transform(features_vector)
         
-        # 2. PCA
-        features_pca = self.pca.transform(features_scaled)
+        # 2. nca
+        features_nca = self.nca.transform(features_scaled)
 
         # 3. Predict
-        prediction = self.knn_model.predict(features_pca)[0]
-        probabilities = self.knn_model.predict_proba(features_pca)[0]
+        prediction = self.knn_model.predict(features_nca)[0]
+        probabilities = self.knn_model.predict_proba(features_nca)[0]
 
         class_name = self.class_names[prediction] if self.class_names else str(prediction)
         confidence = probabilities[prediction]
@@ -138,7 +143,7 @@ def main():
     knn = KNNClassifier(
         n_neighbors=3,      # k=3
         weights='distance', # Weight points by inverse of their distance
-        n_components=100    # PCA components
+        n_components=100    # nca components
     )
     
     knn.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash', 'unknown']
