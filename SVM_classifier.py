@@ -28,7 +28,7 @@ class SVMClassifier:
         self.svm_model = SVC(kernel=kernel, C=C, gamma=gamma, probability=True)
         self.scaler = StandardScaler()
         self.pca = PCA(n_components=n_components)
-        self.class_names = None
+        self.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash','unknown']
         self.is_trained = False
 
     def train(self, X, y, test_size=0.2, random_state=42):
@@ -89,7 +89,7 @@ class SVMClassifier:
 
         return X_test_scaled, y_test
 
-    def predict(self, X):
+    def predict(self, X, threshold=0.6):
         """
         Returns:
             class_name: Predicted class name
@@ -108,28 +108,21 @@ class SVMClassifier:
         class_name = self.class_names[prediction_index]
         confidence = probabilities[prediction_index]
 
+        if confidence < threshold:
+            return "unknown", confidence
+
         return class_name, confidence
 
 
 def main():
-    # Configuration
-    DATASET_DIR = "data/features"  # Output from data_augmentation.py
-    MODEL_SAVE_PATH = "data/models/svm_classifier"
-
-    # You can grab the winning model directly:
-
     # Initialize classifier
-
     classifier = SVMClassifier(kernel='rbf', C = 100, gamma='scale')
-    SVMClassifier.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash','unknown']
     # Load and extract features from augmented dataset
     print("Loading and extracting features from augmented dataset...")
     X, y = pd.read_csv("data/features/features.csv", header=None), pd.read_csv("data/features/labels.csv", header=None).values.ravel()
     # print(f"Loaded {len(X)} samples with {X.shape[1]} features")
     print(f"Classes: {SVMClassifier.class_names}\n")
     classifier.train(X.values, y)
-
-
 
 
 if __name__ == "__main__":
