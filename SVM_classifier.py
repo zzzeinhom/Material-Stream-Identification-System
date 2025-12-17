@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 
 class SVMClassifier:
-    def __init__(self, kernel='rbf', C=1.0, gamma='scale', n_components=400):
+    def __init__(self, kernel='rbf', C=1.0, gamma='scale', n_components=200):
         """
         Initialize SVM Classifier
 
@@ -56,8 +56,8 @@ class SVMClassifier:
 
         # Scale features
         print("Scaling features...")
-        X_train_scaled = X_train
-        X_test_scaled = X_test
+        X_train_scaled = self.scaler.fit_transform(X_train)
+        X_test_scaled = self.scaler.transform(X_test)
 
         print("Applying PCA dimensionality reduction...")  # <--- ADDED
         # Fit PCA on training data and transform it
@@ -77,8 +77,8 @@ class SVMClassifier:
         accuracy = accuracy_score(y_test, y_pred)
 
         print(f"\nAccuracy: {accuracy:.4f}")
-        # print("\nClassification Report:")
-        # print(classification_report(y_test, y_pred, target_names=self.class_names))
+        print("\nClassification Report:")
+        print(classification_report(y_test, y_pred, target_names=self.class_names))
         #
         # print("\nConfusion Matrix:")
         # print(confusion_matrix(y_test, y_pred))
@@ -98,12 +98,15 @@ class SVMClassifier:
         if not self.is_trained:
             raise ValueError("Model must be trained before prediction")
 
-        # Predict
-        prediction = self.svm_model.predict(X)
-        probabilities = self.svm_model.predict_proba(X)
+        X_scaled = self.scaler.transform(X)
+        X_pca = self.pca.transform(X_scaled)
 
-        class_name = self.class_names[prediction]
-        confidence = probabilities[prediction]
+        # Predict
+        prediction_index = self.svm_model.predict(X_pca)[0]  # predict returns an array
+        probabilities = self.svm_model.predict_proba(X_pca)[0]
+
+        class_name = self.class_names[prediction_index]
+        confidence = probabilities[prediction_index]
 
         return class_name, confidence
 
@@ -117,13 +120,13 @@ def main():
 
     # Initialize classifier
 
-    classifier = SVMClassifier(kernel='rbf', C = 100, gamma='scale', n_components=1000)
-    # SVMClassifier.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash']
+    classifier = SVMClassifier(kernel='rbf', C = 100, gamma='scale')
+    SVMClassifier.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash','unknown']
     # Load and extract features from augmented dataset
     print("Loading and extracting features from augmented dataset...")
     X, y = pd.read_csv("data/features/features.csv", header=None), pd.read_csv("data/features/labels.csv", header=None).values.ravel()
     # print(f"Loaded {len(X)} samples with {X.shape[1]} features")
-    # print(f"Classes: {SVMClassifier.class_names}\n")
+    print(f"Classes: {SVMClassifier.class_names}\n")
     classifier.train(X.values, y)
 
 
