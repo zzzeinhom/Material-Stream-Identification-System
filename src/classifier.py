@@ -107,6 +107,14 @@ class UnifiedMaterialClassifier:
                 # Handle different return formats
                 if isinstance(result, tuple) and len(result) == 2:
                     class_name, confidence = result
+                    
+                else:
+                    # If predict only returns class, try to get confidence separately
+                    class_name = result
+                    confidence = 0.0
+                    if hasattr(self.svm_classifier, 'predict_proba'):
+                        proba = self.svm_classifier.predict_proba(features)
+                        confidence = float(np.max(proba))
             # Map to standard class names
             mapped_class = self.class_map.get(class_name.lower(), class_name)
             
@@ -146,6 +154,14 @@ class UnifiedMaterialClassifier:
                 # Handle different return formats
                 if isinstance(result, tuple) and len(result) == 2:
                     class_name, confidence = result
+                
+                else:
+                    # If predict only returns class, try to get confidence separately
+                    class_name = result
+                    confidence = 0.0
+                    if hasattr(self.knn_classifier, 'predict_proba'):
+                        proba = self.knn_classifier.predict_proba(features)
+                        confidence = float(np.max(proba))
                 
             # Map to standard class names
             mapped_class = self.class_map.get(class_name.lower(), class_name)
