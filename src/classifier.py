@@ -147,6 +147,9 @@ class UnifiedMaterialClassifier:
             if len(features.shape) > 1:
                 features = features.flatten()
             
+            class_name = "Unknown"
+            confidence = 0.0
+            
             # Use the existing KNN classifier's predict method
             if hasattr(self.knn_classifier, 'predict'):
                 result = self.knn_classifier.predict(features)
