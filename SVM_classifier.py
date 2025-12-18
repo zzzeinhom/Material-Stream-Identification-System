@@ -120,7 +120,7 @@ class SVMClassifier:
 
 def main():
     # Initialize classifier
-    classifier = SVMClassifier(kernel='rbf', C = 100, gamma='scale')
+    classifier = SVMClassifier(kernel='rbf', C = 10, gamma='scale')
     # Load and extract features from augmented dataset
     print("Loading and extracting features from augmented dataset...")
     X, y = pd.read_csv("data/features/features.csv", header=None), pd.read_csv("data/features/labels.csv", header=None).values.ravel()
