@@ -197,6 +197,45 @@ class UnifiedMaterialClassifier:
         # If both have low confidence, return Unknown
         return "Unknown", min(svm_conf, knn_conf), individual_results
         
+    def predict(self, features: np.ndarray, method: str = 'ensemble') -> Tuple[str, float, dict]:
+        """
+        Main prediction method compatible with gui_application.py
+        
+        Args:
+            features: Feature vector to classify
+            method: Classification method ('svm', 'knn', or 'ensemble')
+            
+        Returns:
+            Tuple of (predicted_class, confidence, individual_results)
+        """
+        try:
+            # Ensure features are numpy array
+            if isinstance(features, pd.DataFrame):
+                features = features.values
+            
+            if not isinstance(features, np.ndarray):
+                features = np.array(features)
+            
+            # Get prediction based on method
+            if method == 'svm':
+                pred_class, confidence = self.predict_svm(features)
+                individual_results = {'svm': {'class': pred_class, 'confidence': float(confidence)}}
+            elif method == 'knn':
+                pred_class, confidence = self.predict_knn(features)
+                individual_results = {'knn': {'class': pred_class, 'confidence': float(confidence)}}
+            elif method == 'ensemble':
+                pred_class, confidence, individual_results = self.predict_ensemble(features)
+            else:
+                raise ValueError(f"Unknown prediction method: {method}")
+            
+            return pred_class, float(confidence), individual_results
+            
+        except Exception as e:
+            print(f"Prediction error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return "Unknown", 0.0, {}
+    
     def get_class_info(self, class_name: str) -> dict:
         """Get information about a material class"""
         class_info = {

@@ -426,7 +426,7 @@ class MSIApplication:
             
             # Classify using selected method
             classifier_method = self.classifier_var.get()
-            pred_class, confidence, individual_results = self.classifier.predict_with_unknown_handling(
+            pred_class, confidence, individual_results = self.classifier.predict(
                 features, method=classifier_method
             )
             
