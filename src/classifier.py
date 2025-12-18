@@ -107,25 +107,6 @@ class UnifiedMaterialClassifier:
                 # Handle different return formats
                 if isinstance(result, tuple) and len(result) == 2:
                     class_name, confidence = result
-            #     else:
-            #         # If predict only returns class, try to get confidence separately
-            #         class_name = result
-            #         confidence = 0.0
-            #         if hasattr(self.svm_classifier, 'predict_proba'):
-            #             proba = self.svm_classifier.predict_proba(features)
-            #             confidence = float(np.max(proba))
-            # else:
-            #     # Fallback: manual prediction if no predict method exists
-            #     features_2d = features.reshape(1, -1)
-            #     features_scaled = self.svm_classifier.scaler.transform(features_2d)
-            #     features_pca = self.svm_classifier.pca.transform(features_scaled)
-                
-            #     prediction = self.svm_classifier.svm_model.predict(features_pca)[0]
-            #     probabilities = self.svm_classifier.svm_model.predict_proba(features_pca)[0]
-                
-            #     class_name = self.class_names[prediction] if self.class_names else str(prediction)
-            #     confidence = float(probabilities[prediction])
-            
             # Map to standard class names
             mapped_class = self.class_map.get(class_name.lower(), class_name)
             
@@ -165,29 +146,7 @@ class UnifiedMaterialClassifier:
                 # Handle different return formats
                 if isinstance(result, tuple) and len(result) == 2:
                     class_name, confidence = result
-                else:
-                    # If predict only returns class, try to get confidence separately
-                    class_name = result
-                    confidence = 0.0
-                    if hasattr(self.knn_classifier, 'predict_proba'):
-                        proba = self.knn_classifier.predict_proba(features)
-                        confidence = float(np.max(proba))
-            else:
-                # Fallback: manual prediction if no predict method exists
-                features_2d = features.reshape(1, -1)
-                features_scaled = self.knn_classifier.scaler.transform(features_2d)
                 
-                if hasattr(self.knn_classifier, 'nca') and self.knn_classifier.nca is not None:
-                    features_nca = self.knn_classifier.nca.transform(features_scaled)
-                else:
-                    features_nca = features_scaled
-                
-                prediction = self.knn_classifier.knn_model.predict(features_nca)[0]
-                probabilities = self.knn_classifier.knn_model.predict_proba(features_nca)[0]
-                
-                class_name = self.class_names[prediction] if self.class_names else str(prediction)
-                confidence = float(probabilities[prediction])
-            
             # Map to standard class names
             mapped_class = self.class_map.get(class_name.lower(), class_name)
             
@@ -237,41 +196,7 @@ class UnifiedMaterialClassifier:
         
         # If both have low confidence, return Unknown
         return "Unknown", min(svm_conf, knn_conf), individual_results
-    
-    def predict_with_unknown_handling(self, features: np.ndarray, method: str) -> Tuple[str, float, dict]:
-        """Main prediction method compatible with gui_application.py"""
-        try:
-            # Ensure features are numpy array
-            if isinstance(features, pd.DataFrame):
-                features = features.values
-            
-            if not isinstance(features, np.ndarray):
-                features = np.array(features)
-            
-            # Get prediction based on method
-            if method == 'svm':
-                pred_class, confidence = self.predict_svm(features)
-                individual_results = {'svm': {'class': pred_class, 'confidence': float(confidence)}}
-            elif method == 'knn':
-                pred_class, confidence = self.predict_knn(features)
-                individual_results = {'knn': {'class': pred_class, 'confidence': float(confidence)}}
-            elif method == 'ensemble':
-                pred_class, confidence, individual_results = self.predict_ensemble(features)
-            else:
-                raise ValueError(f"Unknown prediction method: {method}")
-            
-            # Additional unknown class handling
-            if confidence < self.unknown_threshold:
-                pred_class = "Unknown"
-            
-            return pred_class, float(confidence), individual_results
-            
-        except Exception as e:
-            print(f"Prediction error: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return "Unknown", 0.0, {}
-    
+        
     def get_class_info(self, class_name: str) -> dict:
         """Get information about a material class"""
         class_info = {
