@@ -150,6 +150,11 @@ def main():
 
     # --- Train ---
     knn.train(X, y, test_size=0.2)
+    
+    os.makedirs("models", exist_ok=True)
+    import joblib
+    joblib.dump(knn, "models/knn_classifier.pkl")
+    print("Saved KNN model to models/knn_classifier.pkl")
 
     
 if __name__ == "__main__":

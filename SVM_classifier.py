@@ -123,6 +123,11 @@ def main():
     # print(f"Loaded {len(X)} samples with {X.shape[1]} features")
     print(f"Classes: {SVMClassifier.class_names}\n")
     classifier.train(X.values, y)
+    
+    os.makedirs("models", exist_ok=True)
+    import joblib
+    joblib.dump(classifier, "models/svm_classifier.pkl")
+    print("Saved SVM model to models/svm_classifier.pkl")
 
 
 if __name__ == "__main__":
