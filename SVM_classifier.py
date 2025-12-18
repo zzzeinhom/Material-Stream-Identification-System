@@ -89,7 +89,7 @@ class SVMClassifier:
 
         return X_test_scaled, y_test
 
-    def predict(self, X, threshold=0.6):
+    def predict(self, X, threshold=0.54):
         """
         Returns:
             class_name: Predicted class name
@@ -98,6 +98,10 @@ class SVMClassifier:
         if not self.is_trained:
             raise ValueError("Model must be trained before prediction")
 
+          # Reshape if single sample
+        if len(X.shape) == 1:
+            X = X.reshape(1, -1)
+            
         X_scaled = self.scaler.transform(X)
         X_pca = self.pca.transform(X_scaled)
 
@@ -121,7 +125,7 @@ def main():
     print("Loading and extracting features from augmented dataset...")
     X, y = pd.read_csv("data/features/features.csv", header=None), pd.read_csv("data/features/labels.csv", header=None).values.ravel()
     # print(f"Loaded {len(X)} samples with {X.shape[1]} features")
-    print(f"Classes: {SVMClassifier.class_names}\n")
+    print(f"Classes: {classifier.class_names}\n")
     classifier.train(X.values, y)
     
     os.makedirs("models", exist_ok=True)

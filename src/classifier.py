@@ -107,24 +107,24 @@ class UnifiedMaterialClassifier:
                 # Handle different return formats
                 if isinstance(result, tuple) and len(result) == 2:
                     class_name, confidence = result
-                else:
-                    # If predict only returns class, try to get confidence separately
-                    class_name = result
-                    confidence = 0.0
-                    if hasattr(self.svm_classifier, 'predict_proba'):
-                        proba = self.svm_classifier.predict_proba(features)
-                        confidence = float(np.max(proba))
-            else:
-                # Fallback: manual prediction if no predict method exists
-                features_2d = features.reshape(1, -1)
-                features_scaled = self.svm_classifier.scaler.transform(features_2d)
-                features_pca = self.svm_classifier.pca.transform(features_scaled)
+            #     else:
+            #         # If predict only returns class, try to get confidence separately
+            #         class_name = result
+            #         confidence = 0.0
+            #         if hasattr(self.svm_classifier, 'predict_proba'):
+            #             proba = self.svm_classifier.predict_proba(features)
+            #             confidence = float(np.max(proba))
+            # else:
+            #     # Fallback: manual prediction if no predict method exists
+            #     features_2d = features.reshape(1, -1)
+            #     features_scaled = self.svm_classifier.scaler.transform(features_2d)
+            #     features_pca = self.svm_classifier.pca.transform(features_scaled)
                 
-                prediction = self.svm_classifier.svm_model.predict(features_pca)[0]
-                probabilities = self.svm_classifier.svm_model.predict_proba(features_pca)[0]
+            #     prediction = self.svm_classifier.svm_model.predict(features_pca)[0]
+            #     probabilities = self.svm_classifier.svm_model.predict_proba(features_pca)[0]
                 
-                class_name = self.class_names[prediction] if self.class_names else str(prediction)
-                confidence = float(probabilities[prediction])
+            #     class_name = self.class_names[prediction] if self.class_names else str(prediction)
+            #     confidence = float(probabilities[prediction])
             
             # Map to standard class names
             mapped_class = self.class_map.get(class_name.lower(), class_name)

@@ -2,3 +2,6 @@
 /dataset
 /.idea
 /src/__pycache__
+/__pycache__
+/logs
+/src/venv
