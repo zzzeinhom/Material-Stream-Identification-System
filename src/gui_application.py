@@ -1,6 +1,6 @@
 """
 GUI Application for Material Stream Identification System
-Refined modern interface with improved layout and styling
+Modified to use CNN-based feature extraction
 """
 
 import tkinter as tk
@@ -14,7 +14,7 @@ from PIL import Image, ImageTk
 import os
 
 from camera_handler import CameraHandler, FrameProcessor
-from feature_extractor import FeatureExtractor, extract_features_for_prediction
+from cnn_feature_extraction import CNNFeatureExtractor  # Import CNN feature extractor
 from classifier import UnifiedMaterialClassifier
 import yaml
 
@@ -22,14 +22,15 @@ import yaml
 class MSIApplication:
     """Main GUI application for Material Stream Identification"""
     
-    EXPECTED_FEATURES = 286
+    # Feature dimension will be set based on CNN model
+    EXPECTED_FEATURES = None
     
     def __init__(self, config_path: str = "config/config.yaml"):
         self.config = self._load_config(config_path)
         
         # Initialize components
         self.camera_handler = None
-        self.feature_extractor = None
+        self.cnn_extractor = None  # CNN feature extractor
         self.classifier = None
         self.frame_processor = FrameProcessor()
         
@@ -67,12 +68,17 @@ class MSIApplication:
                     'svm_model': "models/svm_classifier.pkl",
                     'knn_model': "models/knn_classifier.pkl"
                 },
+                'cnn': {
+                    'model_name': 'ResNet50',  # Options: VGG16, ResNet50, MobileNetV2
+                    'input_size': [224, 224]
+                },
                 'gui': {'window_title': "Material Stream Identification System", 'update_interval': 100}
             }
     
     def initialize_system(self) -> bool:
         """Initialize all system components"""
         try:
+            # Initialize camera
             self.camera_handler = CameraHandler(
                 camera_index=self.config['camera']['index'],
                 width=self.config['camera']['width'],
@@ -80,8 +86,22 @@ class MSIApplication:
                 fps=self.config['camera']['fps']
             )
             
-            self.feature_extractor = FeatureExtractor(img_size=(128, 128))
+            # Initialize CNN feature extractor
+            cnn_config = self.config.get('cnn', {})
+            model_name = cnn_config.get('model_name', 'ResNet50')
+            input_size = tuple(cnn_config.get('input_size', [224, 224]))
             
+            print(f"Initializing CNN feature extractor: {model_name}")
+            self.cnn_extractor = CNNFeatureExtractor(
+                model_name=model_name,
+                input_size=input_size
+            )
+            
+            # Set expected features based on CNN model
+            self.EXPECTED_FEATURES = self.cnn_extractor.feature_dim
+            print(f"Expected feature dimension: {self.EXPECTED_FEATURES}")
+            
+            # Initialize classifier
             self.classifier = UnifiedMaterialClassifier(
                 confidence_threshold=self.config['classification']['confidence_threshold'],
                 unknown_threshold=self.config['classification']['unknown_threshold']
@@ -151,7 +171,7 @@ class MSIApplication:
         # Video display with border
         video_frame = tk.Frame(video_container, bg="#000000", highlightbackground=accent_color,
                               highlightthickness=2)
-        video_frame.pack(fill='both', expand=True)
+        video_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         self.video_label = tk.Label(video_frame, bg='#000000')
         self.video_label.pack(fill='both', expand=True)
@@ -178,6 +198,12 @@ class MSIApplication:
         title_label = ttk.Label(header_frame, text="CLASSIFICATION", 
                                style='Header.TLabel', font=('Segoe UI', 12, 'bold'))
         title_label.pack()
+        
+        # CNN Model info
+        cnn_info = ttk.Label(header_frame, 
+                            text=f"CNN: {self.config.get('cnn', {}).get('model_name', 'ResNet50')}", 
+                            font=('Segoe UI', 8), foreground='#808080')
+        cnn_info.pack()
         
         # Control buttons section
         control_frame = ttk.Frame(right_panel, style='Sidebar.TFrame')
@@ -377,29 +403,39 @@ class MSIApplication:
                 time.sleep(0.1)
     
     def process_frame(self, frame: np.ndarray) -> tuple:
-        """Process a single frame"""
+        """Process a single frame using CNN feature extraction"""
         try:
+            # Draw ROI on frame
             frame_with_roi, roi_coords = self.frame_processor.draw_roi(frame.copy())
+            
+            # Extract ROI
             roi_frame = self.frame_processor.extract_roi(frame, roi_coords)
+            
+            # Preprocess for display (optional, for visualization)
             processed_roi = self.frame_processor.preprocess_frame(roi_frame)
             
-            features = extract_features_for_prediction(processed_roi, img_size=(128, 128))
+            # Extract features using CNN
+            features = self.cnn_extractor.extract_features_from_image(roi_frame)
             
+            # Verify feature dimensions
             if features.shape[0] != self.EXPECTED_FEATURES:
                 raise ValueError(
                     f"Feature dimension mismatch! Expected {self.EXPECTED_FEATURES}, "
-                    f"got {features.shape[0]}. Check feature extractor configuration."
+                    f"got {features.shape[0]}. Check CNN model configuration."
                 )
             
+            # Classify using selected method
             classifier_method = self.classifier_var.get()
             pred_class, confidence, individual_results = self.classifier.predict_with_unknown_handling(
                 features, method=classifier_method
             )
             
+            # Add info overlay to frame
             frame_with_info = self.frame_processor.add_info_overlay(
                 frame_with_roi, pred_class, confidence, self.current_fps
             )
             
+            # Draw prediction box if confidence is high enough
             if confidence > self.config['classification']['confidence_threshold']:
                 class_info = self.classifier.get_class_info(pred_class)
                 frame_with_info = self.frame_processor.draw_prediction_box(
@@ -570,6 +606,7 @@ def main():
     """Main entry point"""
     print("=" * 60)
     print("Material Stream Identification System")
+    print("Using CNN-based Feature Extraction")
     print("=" * 60)
     app = MSIApplication()
     app.run()

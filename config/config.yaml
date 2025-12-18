@@ -1,39 +1,22 @@
-# Material Stream Identification System Configuration
-
-# Camera settings
 camera:
-  index: 1  # Camera index (0 for default webcam)
+  index: 0
   width: 640
   height: 480
   fps: 30
 
-# Classification settings
-classification:
-  confidence_threshold: 0.6  # Minimum confidence for classification
-  unknown_threshold: 0.4     # Below this threshold, classify as Unknown
-  display_confidence: true   # Show confidence percentage
+cnn:
+  model_name: 'ResNet50'  # Match what you used for training!
+  input_size: [224, 224]
 
-# Model paths
+classification:
+  confidence_threshold: 0.6
+  unknown_threshold: 0.4
+  display_confidence: true
+
 models:
   svm_model: "models/svm_classifier.pkl"
   knn_model: "models/knn_classifier.pkl"
-  scaler: "models/feature_scaler.pkl"
-  feature_extractor: "models/feature_extractor.pkl"
 
-# GUI settings
 gui:
   window_title: "Material Stream Identification System"
-  update_interval: 100  # milliseconds between frame updates
-  display_size: [800, 600]
-  
-# Feature extraction settings
-features:
-  color_bins: 32
-  texture_bins: 16
-  shape_bins: 16
-  
-# Processing settings
-processing:
-  resize_dimensions: [224, 224]
-  normalize: true
-  augment: false  # Set to false for real-time processing
+  update_interval: 100
