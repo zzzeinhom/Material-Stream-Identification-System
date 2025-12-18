@@ -1,5 +1,5 @@
 """
-Unified Classifier that uses standalone SVM and KNN implementations
+Unified Classifier that uses existing SVM and KNN implementations
 Compatible with gui_application.py
 """
 
@@ -8,14 +8,18 @@ import joblib
 from typing import Tuple, Optional, Dict
 import pandas as pd
 import sys
+import os
 
-# Import classifier definitions from shared module
-from model_definition import SVMClassifier, KNNClassifier
+# Add parent directory to path to import SVM_classifier and KNN_classifier
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Import your existing classifier implementations
+from SVM_classifier import SVMClassifier
+from KNN_classifier import KNNClassifier
 
 
 class UnifiedMaterialClassifier:
-    """Combined classifier using standalone implementations with unknown class rejection"""
+    """Combined classifier using existing SVM and KNN implementations with unknown class rejection"""
     
     def __init__(self, confidence_threshold: float = 0.6, unknown_threshold: float = 0.4):
         self.svm_classifier = None
@@ -36,10 +40,9 @@ class UnifiedMaterialClassifier:
         
     def load_models(self, svm_model_path: str, knn_model_path: str, 
                    svm_scaler_path: str = None, knn_scaler_path: str = None) -> bool:
-        """Load trained standalone models"""
+        """Load trained models from your existing classifier files"""
         try:
             # Ensure class definitions are available in __main__ for pickle unpickling
-            # by importing them into the __main__ namespace
             sys.modules['__main__'].SVMClassifier = SVMClassifier
             sys.modules['__main__'].KNNClassifier = KNNClassifier
             
@@ -51,12 +54,15 @@ class UnifiedMaterialClassifier:
             self.knn_classifier = joblib.load(knn_model_path)
             print(f"Loaded KNN model from {knn_model_path}")
             
-            # Verify models are trained
-            if not self.svm_classifier.is_trained:
+            # Verify models are trained (check if they have the necessary attributes)
+            svm_trained = hasattr(self.svm_classifier, 'svm_model') and self.svm_classifier.svm_model is not None
+            knn_trained = hasattr(self.knn_classifier, 'knn_model') and self.knn_classifier.knn_model is not None
+            
+            if not svm_trained:
                 print("Warning: SVM model is not trained")
                 return False
             
-            if not self.knn_classifier.is_trained:
+            if not knn_trained:
                 print("Warning: KNN model is not trained")
                 return False
             
@@ -77,31 +83,48 @@ class UnifiedMaterialClassifier:
             return False
     
     def predict_svm(self, features: np.ndarray) -> Tuple[str, float]:
-        """Predict using standalone SVM classifier"""
-        if self.svm_classifier is None or not self.svm_classifier.is_trained:
+        """Predict using existing SVM classifier"""
+        if self.svm_classifier is None:
             return "Unknown", 0.0
         
         try:
+            # Ensure features are in the correct format
+            if isinstance(features, pd.DataFrame):
+                features = features.values
+            
+            if not isinstance(features, np.ndarray):
+                features = np.array(features)
+            
             # Ensure features are 1D array
             if len(features.shape) > 1:
                 features = features.flatten()
             
-            # Reshape to 2D for sklearn compatibility
-            features_2d = features.reshape(1, -1)
-            
-            # Apply scaling
-            features_scaled = self.svm_classifier.scaler.transform(features_2d)
-            
-            # Apply PCA transformation
-            features_pca = self.svm_classifier.pca.transform(features_scaled)
-            
-            # Get prediction
-            prediction = self.svm_classifier.svm_model.predict(features_pca)[0]
-            probabilities = self.svm_classifier.svm_model.predict_proba(features_pca)[0]
-            
-            # Get class name and confidence
-            class_name = self.class_names[prediction] if self.class_names else str(prediction)
-            confidence = float(probabilities[prediction])
+            # Use the existing SVM classifier's predict method
+            # Assuming your SVM_classifier has a predict() method that returns class and confidence
+            if hasattr(self.svm_classifier, 'predict'):
+                result = self.svm_classifier.predict(features)
+                
+                # Handle different return formats
+                if isinstance(result, tuple) and len(result) == 2:
+                    class_name, confidence = result
+                else:
+                    # If predict only returns class, try to get confidence separately
+                    class_name = result
+                    confidence = 0.0
+                    if hasattr(self.svm_classifier, 'predict_proba'):
+                        proba = self.svm_classifier.predict_proba(features)
+                        confidence = float(np.max(proba))
+            else:
+                # Fallback: manual prediction if no predict method exists
+                features_2d = features.reshape(1, -1)
+                features_scaled = self.svm_classifier.scaler.transform(features_2d)
+                features_pca = self.svm_classifier.pca.transform(features_scaled)
+                
+                prediction = self.svm_classifier.svm_model.predict(features_pca)[0]
+                probabilities = self.svm_classifier.svm_model.predict_proba(features_pca)[0]
+                
+                class_name = self.class_names[prediction] if self.class_names else str(prediction)
+                confidence = float(probabilities[prediction])
             
             # Map to standard class names
             mapped_class = self.class_map.get(class_name.lower(), class_name)
@@ -110,7 +133,7 @@ class UnifiedMaterialClassifier:
             if confidence < self.confidence_threshold:
                 return "Unknown", confidence
             
-            return mapped_class, confidence
+            return mapped_class, float(confidence)
             
         except Exception as e:
             print(f"SVM prediction error: {str(e)}")
@@ -119,18 +142,51 @@ class UnifiedMaterialClassifier:
             return "Unknown", 0.0
     
     def predict_knn(self, features: np.ndarray) -> Tuple[str, float]:
-        """Predict using standalone KNN classifier"""
-        if self.knn_classifier is None or not self.knn_classifier.is_trained:
+        """Predict using existing KNN classifier"""
+        if self.knn_classifier is None:
             return "Unknown", 0.0
         
         try:
+            # Ensure features are in the correct format
+            if isinstance(features, pd.DataFrame):
+                features = features.values
+            
+            if not isinstance(features, np.ndarray):
+                features = np.array(features)
+            
             # Ensure features are 1D array
             if len(features.shape) > 1:
                 features = features.flatten()
             
-            # Use the standalone KNN's predict_features method
-            # This handles scaling and NCA transformation internally
-            class_name, confidence = self.knn_classifier.predict_features(features)
+            # Use the existing KNN classifier's predict method
+            if hasattr(self.knn_classifier, 'predict'):
+                result = self.knn_classifier.predict(features)
+                
+                # Handle different return formats
+                if isinstance(result, tuple) and len(result) == 2:
+                    class_name, confidence = result
+                else:
+                    # If predict only returns class, try to get confidence separately
+                    class_name = result
+                    confidence = 0.0
+                    if hasattr(self.knn_classifier, 'predict_proba'):
+                        proba = self.knn_classifier.predict_proba(features)
+                        confidence = float(np.max(proba))
+            else:
+                # Fallback: manual prediction if no predict method exists
+                features_2d = features.reshape(1, -1)
+                features_scaled = self.knn_classifier.scaler.transform(features_2d)
+                
+                if hasattr(self.knn_classifier, 'nca') and self.knn_classifier.nca is not None:
+                    features_nca = self.knn_classifier.nca.transform(features_scaled)
+                else:
+                    features_nca = features_scaled
+                
+                prediction = self.knn_classifier.knn_model.predict(features_nca)[0]
+                probabilities = self.knn_classifier.knn_model.predict_proba(features_nca)[0]
+                
+                class_name = self.class_names[prediction] if self.class_names else str(prediction)
+                confidence = float(probabilities[prediction])
             
             # Map to standard class names
             mapped_class = self.class_map.get(class_name.lower(), class_name)
@@ -261,42 +317,14 @@ class UnifiedMaterialClassifier:
         return class_info.get(class_name_cap, class_info['Unknown'])
 
 
-# Utility function to train and save standalone models
-def train_and_save_standalone_models():
-    """Train both classifiers and save them in standalone format"""
-    # Load data
-    X = pd.read_csv("data/features/features.csv", header=None)
-    y = pd.read_csv("data/features/labels.csv", header=None).values.ravel()
-    
-    # Train SVM classifier
-    print("Training SVM classifier...")
-    svm_classifier = SVMClassifier(kernel='rbf', C=1000, gamma='scale', n_components=100)
-    svm_classifier.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash', 'unknown']
-    svm_classifier.train(X, y, test_size=0.2)
-    
-    # Save SVM model
-    svm_model_path = "models/svm_classifier.pkl"
-    joblib.dump(svm_classifier, svm_model_path)
-    print(f"Saved SVM model to {svm_model_path}")
-    
-    # Train KNN classifier
-    print("\nTraining KNN classifier...")
-    knn_classifier = KNNClassifier(n_neighbors=3, weights='distance', n_components=70)
-    knn_classifier.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash', 'unknown']
-    knn_classifier.train(X, y, test_size=0.2)
-    
-    # Save KNN model
-    knn_model_path = "models/knn_classifier.pkl"
-    joblib.dump(knn_classifier, knn_model_path)
-    print(f"Saved KNN model to {knn_model_path}")
-    
-    return svm_model_path, knn_model_path
+# Utility function to train and save models using existing classifiers
+
 
 
 if __name__ == "__main__":
     # Example usage
     print("Training and saving models...")
-    train_and_save_standalone_models()
+    train_and_save_models()
     
     print("\nTesting unified classifier...")
     classifier = UnifiedMaterialClassifier()
