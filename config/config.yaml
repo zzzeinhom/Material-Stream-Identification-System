@@ -8,10 +8,6 @@ cnn:
   model_name: 'ResNet50'  # Match what you used for training!
   input_size: [224, 224]
 
-classification:
-  confidence_threshold: 0.6
-  unknown_threshold: 0.4
-  display_confidence: true
 
 models:
   svm_model: "models/svm_classifier.pkl"

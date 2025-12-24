@@ -102,10 +102,7 @@ class MSIApplication:
             print(f"Expected feature dimension: {self.EXPECTED_FEATURES}")
             
             # Initialize classifier
-            self.classifier = UnifiedMaterialClassifier(
-                confidence_threshold=self.config['classification']['confidence_threshold'],
-                unknown_threshold=self.config['classification']['unknown_threshold']
-            )
+            self.classifier = UnifiedMaterialClassifier()
             
             models_loaded = self.classifier.load_models(
                 svm_model_path=self.config['models']['svm_model'],
@@ -229,15 +226,6 @@ class MSIApplication:
                                        values=['ensemble', 'svm', 'knn'], state='readonly',
                                        font=('Segoe UI', 9))
         classifier_combo.pack(fill='x')
-        
-        # Settings button
-        settings_btn = tk.Button(control_frame, text="⚙ Settings",
-                                command=self.show_settings,
-                                bg='#3c3c3c', fg=text_color, font=('Segoe UI', 9),
-                                relief='flat', cursor='hand2')
-        settings_btn.pack(fill='x', pady=(10, 0))
-        settings_btn.bind('<Enter>', lambda e: settings_btn.config(bg='#4c4c4c'))
-        settings_btn.bind('<Leave>', lambda e: settings_btn.config(bg='#3c3c3c'))
         
         # Separator
         separator = ttk.Separator(right_panel, orient='horizontal')
@@ -495,84 +483,6 @@ class MSIApplication:
             
         except Exception as e:
             print(f"GUI update error: {str(e)}")
-    
-    def show_settings(self):
-        """Show modern settings dialog"""
-        settings_window = tk.Toplevel(self.root)
-        settings_window.title("Settings")
-        settings_window.geometry("450x250")
-        settings_window.configure(bg='#252526')
-        settings_window.resizable(False, False)
-        
-        # Header
-        header = tk.Label(settings_window, text="Classification Settings",
-                         bg='#252526', fg='#cccccc', font=('Segoe UI', 12, 'bold'))
-        header.pack(pady=(20, 20))
-        
-        # Content frame
-        content = tk.Frame(settings_window, bg='#252526')
-        content.pack(fill='both', expand=True, padx=30)
-        
-        # Confidence threshold
-        conf_frame = tk.Frame(content, bg='#252526')
-        conf_frame.pack(fill='x', pady=10)
-        
-        tk.Label(conf_frame, text="Confidence Threshold:",
-                bg='#252526', fg='#cccccc', font=('Segoe UI', 9)).pack(side='left')
-        
-        conf_var = tk.DoubleVar(value=self.config['classification']['confidence_threshold'])
-        conf_label = tk.Label(conf_frame, text=f"{conf_var.get():.2f}",
-                             bg='#252526', fg='#4ec9b0', font=('Segoe UI', 9, 'bold'))
-        conf_label.pack(side='right')
-        
-        conf_scale = ttk.Scale(content, from_=0.0, to=1.0, variable=conf_var, orient=tk.HORIZONTAL)
-        conf_scale.pack(fill='x', pady=(0, 15))
-        
-        def update_conf_label(*args):
-            conf_label.config(text=f"{conf_var.get():.2f}")
-        conf_var.trace('w', update_conf_label)
-        
-        # Unknown threshold
-        unknown_frame = tk.Frame(content, bg='#252526')
-        unknown_frame.pack(fill='x', pady=10)
-        
-        tk.Label(unknown_frame, text="Unknown Threshold:",
-                bg='#252526', fg='#cccccc', font=('Segoe UI', 9)).pack(side='left')
-        
-        unknown_var = tk.DoubleVar(value=self.config['classification']['unknown_threshold'])
-        unknown_label = tk.Label(unknown_frame, text=f"{unknown_var.get():.2f}",
-                                bg='#252526', fg='#4ec9b0', font=('Segoe UI', 9, 'bold'))
-        unknown_label.pack(side='right')
-        
-        unknown_scale = ttk.Scale(content, from_=0.0, to=1.0, variable=unknown_var, orient=tk.HORIZONTAL)
-        unknown_scale.pack(fill='x', pady=(0, 20))
-        
-        def update_unknown_label(*args):
-            unknown_label.config(text=f"{unknown_var.get():.2f}")
-        unknown_var.trace('w', update_unknown_label)
-        
-        # Buttons
-        button_frame = tk.Frame(settings_window, bg='#252526')
-        button_frame.pack(pady=20)
-        
-        def apply_settings():
-            self.config['classification']['confidence_threshold'] = conf_var.get()
-            self.config['classification']['unknown_threshold'] = unknown_var.get()
-            if self.classifier:
-                self.classifier.confidence_threshold = conf_var.get()
-                self.classifier.unknown_threshold = unknown_var.get()
-            settings_window.destroy()
-            messagebox.showinfo("Settings", "Settings applied successfully!")
-        
-        apply_btn = tk.Button(button_frame, text="Apply Settings", command=apply_settings,
-                             bg='#007acc', fg='white', font=('Segoe UI', 9, 'bold'),
-                             relief='flat', cursor='hand2', padx=20, pady=8)
-        apply_btn.pack(side='left', padx=5)
-        
-        cancel_btn = tk.Button(button_frame, text="Cancel", command=settings_window.destroy,
-                              bg='#3c3c3c', fg='#cccccc', font=('Segoe UI', 9),
-                              relief='flat', cursor='hand2', padx=20, pady=8)
-        cancel_btn.pack(side='left', padx=5)
     
     def on_closing(self):
         """Handle window closing"""

@@ -21,13 +21,10 @@ from KNN_classifier import KNNClassifier
 class UnifiedMaterialClassifier:
     """Combined classifier using existing SVM and KNN implementations with unknown class rejection"""
     
-    def __init__(self, confidence_threshold: float = 0.6, unknown_threshold: float = 0.4):
+    def __init__(self):
         self.svm_classifier = None
         self.knn_classifier = None
         self.class_names = ['glass', 'paper', 'cardboard', 'plastic', 'metal', 'trash', 'unknown']
-        
-        self.confidence_threshold = confidence_threshold
-        self.unknown_threshold = unknown_threshold
         self.class_map = {
             'glass': 'Glass',
             'paper': 'Paper', 
@@ -111,9 +108,6 @@ class UnifiedMaterialClassifier:
             # Map to standard class names
             mapped_class = self.class_map.get(class_name.lower(), class_name)
             
-            # Apply confidence threshold
-            if confidence < self.confidence_threshold:
-                return "Unknown", confidence
             
             return mapped_class, float(confidence)
             
@@ -154,9 +148,6 @@ class UnifiedMaterialClassifier:
             # Map to standard class names
             mapped_class = self.class_map.get(class_name.lower(), class_name)
             
-            # Apply confidence threshold
-            if confidence < self.confidence_threshold:
-                return "Unknown", confidence
             
             return mapped_class, float(confidence)
             
@@ -181,7 +172,7 @@ class UnifiedMaterialClassifier:
         print(f"SVM: {svm_class} ({svm_conf:.3f}), KNN: {knn_class} ({knn_conf:.3f})")
         
         # If both classifiers agree and have high confidence
-        if svm_class == knn_class and svm_conf > self.confidence_threshold and knn_conf > self.confidence_threshold:
+        if svm_class == knn_class :
             # Average the confidences
             final_confidence = (svm_conf + knn_conf) / 2
             return svm_class, final_confidence, individual_results
@@ -194,12 +185,8 @@ class UnifiedMaterialClassifier:
             primary_class = knn_class
             primary_conf = knn_conf
         
-        # Check if primary classifier has sufficient confidence
-        if primary_conf >= self.confidence_threshold:
-            return primary_class, primary_conf, individual_results
+        return primary_class, primary_conf, individual_results
         
-        # If both have low confidence, return Unknown
-        return "Unknown", min(svm_conf, knn_conf), individual_results
         
     def predict(self, features: np.ndarray, method: str = 'ensemble') -> Tuple[str, float, dict]:
         """
