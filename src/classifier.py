@@ -144,8 +144,8 @@ class UnifiedMaterialClassifier:
             confidence = 0.0
             
             # Use the existing KNN classifier's predict method
-            if hasattr(self.knn_classifier, 'predict_features'):
-                result = self.knn_classifier.predict_features(features)
+            if hasattr(self.knn_classifier, 'predict'):
+                result = self.knn_classifier.predict(features)
                 
                 # Handle different return formats
                 if isinstance(result, tuple) and len(result) == 2:
