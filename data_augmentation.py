@@ -324,21 +324,20 @@ def create_unknown_class(output_dir, target_count=-1):
         img = cv2.imread(str(source_img_path))
         
         # Apply extreme transformations to make it "unknown"
-        method = random.choice(['heavy_blur', 'extreme_noise', 'very_dark', 'overexposed'])
+        methods = ['heavy_blur', 'extreme_noise', 'very_dark']
         
-        if method == 'heavy_blur':
-            img = cv2.GaussianBlur(img, (25, 25), 0)
-        
-        elif method == 'extreme_noise':
-            noise = np.random.normal(0, 50, img.shape).astype(np.uint8)
-            img = cv2.add(img, noise)
-        
-        elif method == 'very_dark':
-            img = cv2.convertScaleAbs(img, alpha=0.3, beta=0)
-        
-        elif method == 'overexposed':
-            img = cv2.convertScaleAbs(img, alpha=1.5, beta=50)
-        
+        for method in methods:
+            if method == 'heavy_blur':
+                img = cv2.GaussianBlur(img, (35, 35), 0)
+
+            elif method == 'extreme_noise':
+                noise = np.random.normal(0, 50, img.shape).astype(np.uint8)
+                img = cv2.add(img, noise)
+            elif method == 'very_dark':
+                img = cv2.convertScaleAbs(img, alpha=0.4, beta=0)
+
+
+            
         output_path = unknown_path / f"unknown_{idx:04d}.jpg"
         cv2.imwrite(str(output_path), img)
     

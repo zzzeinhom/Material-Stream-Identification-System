@@ -93,7 +93,7 @@ class KNNClassifier:
 
         return X_test_scaled, y_test
 
-    def predict_features(self, features_vector):
+    def predict(self, features_vector):
         """
         Predict class for a raw feature vector (already extracted)
         """
